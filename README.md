@@ -15,7 +15,7 @@ In particular, karma.link exposes an easy-to-use JSON API that allows desktop, w
 This makes it possible to build conventional apps that leverage blockchain technology where adequate.
 
 In contrast to software like the [Mist browser](https://github.com/ethereum/mist), karma.link is designed as an infrastructure tool for businesses.
-In this context, users act on behalf of the organization they represent, fulfilling their jobs as instructed by their employer instead of acting on their own prejudice.
+In this context, users act on behalf of the organization they represent, fulfilling their jobs as instructed by their employer instead of acting of their own accord.
 
 ## Features
 
