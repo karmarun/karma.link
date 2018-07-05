@@ -1,5 +1,5 @@
 // Copyright 2018 karma.run AG. All rights reserved.
-package extract
+package extract // import "github.com/karmarun/karma.link/ast/extract"
 
 import (
 	"bytes"

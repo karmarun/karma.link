@@ -1,5 +1,5 @@
 // Copyright 2018 karma.run AG. All rights reserved.
-package ast
+package ast // import "github.com/karmarun/karma.link/ast"
 
 import (
 	"encoding/json"

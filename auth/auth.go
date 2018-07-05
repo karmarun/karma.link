@@ -1,5 +1,5 @@
 // Copyright 2018 karma.run AG. All rights reserved.
-package auth
+package auth // import "github.com/karmarun/karma.link/auth"
 
 import (
 	"crypto/ecdsa"

@@ -1,5 +1,5 @@
 // Copyright 2018 karma.run AG. All rights reserved.
-package fs
+package fs // import "github.com/karmarun/karma.link/auth/fs"
 
 import (
 	"crypto/rand"

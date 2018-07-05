@@ -1,5 +1,5 @@
 // Copyright 2018 karma.run AG. All rights reserved.
-package types
+package types // import "github.com/karmarun/karma.link/types"
 
 import (
 	"strconv"

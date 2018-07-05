@@ -1,5 +1,5 @@
 // Copyright 2018 karma.run AG. All rights reserved.
-package abi
+package abi // import "github.com/karmarun/karma.link/abi"
 
 import (
 	"encoding/json"
