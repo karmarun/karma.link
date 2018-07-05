@@ -60,6 +60,9 @@ $ go get github.com/karmarun/karma.link/link
 
 ## License & Legal
 
-See the `LICENSE.md` file in the repository root.
+karma.link is a product of karma.run AG, registered in Zürich, Switzerland.
 
-<sub>karma.link is a product of karma.run AG, registered in Zürich, Switzerland.</sub>
+No license is provided (yet).
+
+This software makes use of external software libraries from the [go-ethereum project](https://github.com/ethereum/go-ethereum),
+which are licensed under the [GNU Lesser General Public License v3.0](https://www.gnu.org/licenses/lgpl-3.0.en.html).
