@@ -1,11 +1,12 @@
+// Copyright 2018 karma.run AG. All rights reserved.
 package extract
 
 import (
-	"ast"
 	"bytes"
+	"github.com/karmarun/karma.link/ast"
+	"github.com/karmarun/karma.link/types"
 	"log"
 	"strconv"
-	"types"
 )
 
 func ContractDefinitions(root ast.SourceUnit) []ast.ContractDefinition {

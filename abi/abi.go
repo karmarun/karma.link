@@ -1,11 +1,12 @@
+// Copyright 2018 karma.run AG. All rights reserved.
 package abi
 
 import (
 	"config"
 	"encoding/json"
+	"github.com/karmarun/karma.link/types"
 	"log"
 	"math/big"
-	"types"
 )
 
 type Code []byte

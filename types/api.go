@@ -1,7 +1,8 @@
+// Copyright 2018 karma.run AG. All rights reserved.
 package types
 
 import (
-	"ast"
+	"github.com/karmarun/karma.link/ast"
 )
 
 type Project struct {

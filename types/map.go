@@ -1,3 +1,4 @@
+// Copyright 2018 karma.run AG. All rights reserved.
 package types
 
 type Map map[Reference]Type

@@ -1,12 +1,13 @@
+// Copyright 2018 karma.run AG. All rights reserved.
 package abi
 
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/karmarun/karma.link/types"
 	"math/big"
 	"strconv"
 	"strings"
-	"types"
 	"unicode/utf8"
 )
 

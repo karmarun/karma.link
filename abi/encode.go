@@ -1,12 +1,13 @@
+// Copyright 2018 karma.run AG. All rights reserved.
 package abi
 
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/karmarun/karma.link/types"
 	"math/big"
 	"strconv"
 	"strings"
-	"types"
 )
 
 func Encode(typ types.Type, arg json.RawMessage) (Code, error) {

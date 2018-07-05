@@ -1,14 +1,15 @@
+// Copyright 2018 karma.run AG. All rights reserved.
 package fs
 
 import (
-	"auth"
-	"config"
 	"crypto/rand"
 	"crypto/sha512"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/karmarun/karma.link/auth"
+	"github.com/karmarun/karma.link/config"
 	"io/ioutil"
 	"log"
 	"os"

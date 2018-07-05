@@ -1,11 +1,12 @@
+// Copyright 2018 karma.run AG. All rights reserved.
 package extract
 
 import (
-	"ast"
 	"encoding/hex"
+	"github.com/karmarun/karma.link/ast"
+	"github.com/karmarun/karma.link/types"
 	"log"
 	"strings"
-	"types"
 )
 
 // TODO: Windows support: normalize paths to forward slashes without drive letters, etc.

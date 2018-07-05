@@ -1,13 +1,8 @@
+// Copyright 2018 karma.run AG. All rights reserved.
 package main
 
 import (
-	"abi"
-	"ast"
-	"ast/extract"
-	"auth"
-	"auth/fs"
 	"compress/gzip"
-	"config"
 	"encoding/hex"
 	"encoding/json"
 	"flag"
@@ -17,6 +12,13 @@ import (
 	"github.com/ethereum/go-ethereum/crypto/sha3"
 	"github.com/ethereum/go-ethereum/rlp"
 	ethrpc "github.com/ethereum/go-ethereum/rpc"
+	"github.com/karmarun/karma.link/abi"
+	"github.com/karmarun/karma.link/ast"
+	"github.com/karmarun/karma.link/ast/extract"
+	"github.com/karmarun/karma.link/auth"
+	"github.com/karmarun/karma.link/auth/fs"
+	"github.com/karmarun/karma.link/config"
+	"github.com/karmarun/karma.link/types"
 	"io"
 	"io/ioutil"
 	"log"
@@ -28,7 +30,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"types"
 )
 
 const defaultGasLimit = 90000
