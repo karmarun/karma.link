@@ -2,8 +2,8 @@
 package abi
 
 import (
-	"config"
 	"encoding/json"
+	"github.com/karmarun/karma.link/config"
 	"github.com/karmarun/karma.link/types"
 	"log"
 	"math/big"
