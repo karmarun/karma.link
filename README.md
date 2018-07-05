@@ -6,6 +6,7 @@
 karma.link is a cross-platform RPC server that allows 'classic' IT systems to interact with smart contracts on the [Ethereum](https://ethereum.org) blockchain network through JSON.
 
 [![GoDoc](https://godoc.org/github.com/karmarun/karma.link?status.svg)](https://godoc.org/github.com/karmarun/karma.link)
+[![Go Report Card](https://goreportcard.com/badge/github.com/karmarun/karma.link)](https://goreportcard.com/report/github.com/karmarun/karma.link)
 
 ## Overview
 
