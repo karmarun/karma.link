@@ -27,7 +27,7 @@ This is why private key management is the most important point in karma.link's f
 
 ### Smart Contract Management
 
-Writing smart contracts (also called *Ðapps*) in [Solidity](http://solidity.readthedocs.io/en/latest/) is a relatively easy task for a developer.
+Writing smart contracts (also called *Ðapps*) in [Solidity](http://solidity.readthedocs.io/en/latest/) is a straightforward task for a developer.
 However, deploying and managing contracts on a company scale requires tools; system administration tools.
 karma.link can read, understand and manage smart contracts. As such, it can give an operator valuable insights into its API surface.
 Futhermore, karma.link can deploy a managed contract easily and report on its state.
