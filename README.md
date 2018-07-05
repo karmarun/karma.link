@@ -14,8 +14,13 @@ karma.link aims to bridge the gap between 'classic' IT development and the block
 In particular, karma.link exposes an easy-to-use JSON API that allows desktop, web & mobile applications to execute parts of their workload on the Ethereum blockchain.
 This makes it possible to build conventional apps that leverage blockchain technology where adequate.
 
-In contrast to software like the [Mist Browser](https://github.com/ethereum/mist), karma.link is designed as an infrastructure tool for businesses.
+In contrast to software like the [Mist browser](https://github.com/ethereum/mist), karma.link is designed as an infrastructure tool for businesses.
 In this context, users act on behalf of the organization they represent, fulfilling their jobs as instructed by their employer instead of acting on their own prejudice.
+
+## State
+
+karma.link was released on Thursday, July the 5th. It is currently in [MVP](https://en.wikipedia.org/wiki/Minimum_viable_product) phase.
+Any and all APIs are subject to change without notice.
 
 ## Features
 
@@ -47,7 +52,7 @@ External services can invoke smart contracts through karma.link using only JSON 
  - [git](https://git-scm.com/)
  - [go](https://golang.org/dl/)
 
-### Build
+### Fetch & Build
 
 ```
 $ go get github.com/karmarun/karma.link/link

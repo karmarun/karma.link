@@ -30,7 +30,7 @@ func init() {
 		&GethRPCURL,
 		`geth-rpc`,
 		getenv("KARMA_GETH_RPC", ""),
-		`URL or path to a running geth RPC API (local IPC pipe, websocket or JSON-RPC over HTTP)`,
+		`URL or path to a running geth RPC API (local IPC pipe, WebSocket or HTTP)`,
 	)
 	flag.StringVar(
 		&CombinedJSONPath,
