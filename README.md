@@ -32,13 +32,14 @@ However, deploying and managing contracts on a company scale requires tools; sys
 karma.link can read, understand and manage smart contracts. As such, it can give an operator valuable insights into their API surface.
 Futhermore, karma.link can deploy a managed contract easily and report on its state.
 
-### Ease of Integration
+### On-the-fly Translation
 
 Ethereum smart contracts speak a rather complex binary format called the [Solidity ABI](http://solidity.readthedocs.io/en/latest/abi-spec.html).
 Software libraries like [web3](https://github.com/ethereum/?q=web3) (for Javascript & Python) make it possible to encode and decode data in the ABI format.
 However, making effective use of these libraries is not always as easy as one could wish and a moderate amount of knowledge is required to do it well.
 karma.link understands Solidity's type system and ABI. This allows it to abstract the binary format away completely.
-External services can invoke smart contracts through karma.link using only JSON and read back the results as JSON just as easily.
+External services can invoke smart contracts through karma.link using only JSON and read back the results in JSON just as easily.
+This makes karma.link easy to integrate in any modern backend environment.
 
 ## Documentation
 
