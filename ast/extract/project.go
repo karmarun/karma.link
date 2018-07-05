@@ -92,8 +92,6 @@ func Project(combined ast.Combined) types.Project {
 			contract.Parents = append(contract.Parents, parent)
 		}
 		for _, typ := range typeMap {
-			// NOTE: event types have no canonicalName field in AST and can therefore not be associated
-			// with a particular contract through this logic.
 			if named, ok := typ.(types.Named); ok && strings.HasPrefix(named.Name, (contract.File+":"+contract.Name)) {
 				typeName := named.Name[strings.LastIndex(named.Name, `.`)+1:]
 				contract.Types[typeName] = named
