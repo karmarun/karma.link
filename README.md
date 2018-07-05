@@ -40,6 +40,10 @@ However, making effective use of these libraries is not always as easy as one co
 karma.link understands Solidity's type system and ABI. This allows it to abstract the binary format away completely.
 External services can invoke smart contracts through karma.link using only JSON and read back the results as JSON just as easily.
 
+## Documentation
+
+Please visit our [Github wiki](https://github.com/karmarun/karma.link/wiki).
+
 ## Project State
 
 karma.link was released on Thursday, July the 5th. It is currently in [MVP](https://en.wikipedia.org/wiki/Minimum_viable_product) phase.
@@ -54,7 +58,7 @@ Any and all APIs are subject to change without notice.
 
 ### Fetch & Build
 
-```
+```bash
 $ go get github.com/karmarun/karma.link/link
 ```
 
