@@ -23,7 +23,7 @@ func init() {
 	flag.StringVar(
 		&HttpBind,
 		`http-bind`,
-		getenv("KARMA_HTTP_PORT", ":8080"),
+		getenv("KARMA_HTTP_BIND", ":8080"),
 		`HTTP interface and port number to bind and serve`,
 	)
 	flag.StringVar(
