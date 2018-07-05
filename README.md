@@ -17,11 +17,6 @@ This makes it possible to build conventional apps that leverage blockchain techn
 In contrast to software like the [Mist browser](https://github.com/ethereum/mist), karma.link is designed as an infrastructure tool for businesses.
 In this context, users act on behalf of the organization they represent, fulfilling their jobs as instructed by their employer instead of acting on their own prejudice.
 
-## State
-
-karma.link was released on Thursday, July the 5th. It is currently in [MVP](https://en.wikipedia.org/wiki/Minimum_viable_product) phase.
-Any and all APIs are subject to change without notice.
-
 ## Features
 
 ### Private Key Management
@@ -44,6 +39,11 @@ Software libraries like [web3](https://github.com/ethereum/?q=web3) (for Javascr
 However, making effective use of these libraries is not always as easy as one could wish and a moderate amount of knowledge is required to do it well.
 karma.link understands Solidity's type system and ABI. This allows it to abstract the binary format away completely.
 External services can invoke smart contracts through karma.link using only JSON and read back the results as JSON just as easily.
+
+## Project State
+
+karma.link was released on Thursday, July the 5th. It is currently in [MVP](https://en.wikipedia.org/wiki/Minimum_viable_product) phase.
+Any and all APIs are subject to change without notice.
 
 ## Installation
 
