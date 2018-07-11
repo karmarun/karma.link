@@ -1,4 +1,5 @@
 // Copyright 2018 karma.run AG. All rights reserved.
+
 package abi // import "github.com/karmarun/karma.link/abi"
 
 import (
