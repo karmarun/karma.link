@@ -51,7 +51,10 @@ func Project(combined ast.Combined) (types.Project, error) {
 		contractDefinitions := ContractDefinitions(sourceUnit)
 
 		for _, contractDefinition := range contractDefinitions {
-			functions := ContractAPI(contractDefinition, typeMap)
+			functions, e := ContractAPI(contractDefinition, typeMap)
+			if e != nil {
+				return types.Project{}, e
+			}
 			api := make(map[string]types.Function, len(functions))
 			for _, function := range functions {
 				api[string(function.SoliditySignature())] = function

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/karmarun/karma.link/ast"
 	"github.com/karmarun/karma.link/types"
-	"log"
 	"strconv"
 )
 
@@ -21,7 +20,7 @@ func ContractDefinitions(root ast.SourceUnit) []ast.ContractDefinition {
 	return definitions
 }
 
-func ContractAPI(contractDefinition ast.ContractDefinition, typeMap types.Map) []types.Function {
+func ContractAPI(contractDefinition ast.ContractDefinition, typeMap types.Map) ([]types.Function, error) {
 	children := contractDefinition.Children()
 	extracted := make([]types.Function, 0, len(children))
 	for _, child := range children {
@@ -35,12 +34,15 @@ func ContractAPI(contractDefinition ast.ContractDefinition, typeMap types.Map) [
 			if functionDefinition.IsConstructor {
 				continue // constructor is not part of the API
 			}
-			function := FunctionAPI(functionDefinition, typeMap)
+			function, e := FunctionAPI(functionDefinition, typeMap)
+			if e != nil {
+				return nil, e
+			}
 			extracted = append(extracted, function)
 		}
 
 	}
-	return extracted
+	return extracted, nil
 }
 
 // REMEMBER: public/external variables also part of API as (getter) functions
@@ -76,18 +78,18 @@ func variableAccessor(typ types.Type, typeMap types.Map, prev []types.Type) ([]t
 	return prev, concreteType
 }
 
-func FunctionAPI(functionDefinition ast.FunctionDefinition, typeMap types.Map) types.Function {
+func FunctionAPI(functionDefinition ast.FunctionDefinition, typeMap types.Map) (types.Function, error) {
 
 	children := functionDefinition.Children()
 
 	inParamList, ok := children[0].(ast.ParameterList)
 	if !ok {
-		log.Fatalln("functionDefinition's first child expected to be ParameterList")
+		return types.Function{}, fmt.Errorf(`functionDefinition's first child expected to be ParameterList`)
 	}
 
 	outParamList, ok := children[1].(ast.ParameterList)
 	if !ok {
-		log.Fatalln("functionDefinition's second child expected to be ParameterList")
+		return types.Function{}, fmt.Errorf(`functionDefinition's second child expected to be ParameterList`)
 	}
 
 	inParams, outParams := inParamList.Children(), outParamList.Children()
@@ -96,7 +98,7 @@ func FunctionAPI(functionDefinition ast.FunctionDefinition, typeMap types.Map) t
 	for i, child := range inParams {
 		variableDeclaration, ok := child.(ast.VariableDeclaration)
 		if !ok {
-			log.Fatalln("paramList's children expected to be VariableDeclarations")
+			return types.Function{}, fmt.Errorf(`paramList's children expected to be VariableDeclarations`)
 		}
 		typeId := variableDeclaration.Children()[0].Header().Id
 		inputs[i] = typeMap.Deref(types.Reference(typeId))
@@ -105,7 +107,7 @@ func FunctionAPI(functionDefinition ast.FunctionDefinition, typeMap types.Map) t
 	for i, child := range outParams {
 		variableDeclaration, ok := child.(ast.VariableDeclaration)
 		if !ok {
-			log.Fatalln("paramList's children expected to be VariableDeclarations")
+			return types.Function{}, fmt.Errorf(`paramList's children expected to be VariableDeclarations`)
 		}
 		typeId := variableDeclaration.Children()[0].Header().Id
 		outputs[i] = typeMap.Deref(types.Reference(typeId))
@@ -125,7 +127,7 @@ func FunctionAPI(functionDefinition ast.FunctionDefinition, typeMap types.Map) t
 		Inputs:          inputs,
 		Outputs:         outputs,
 		Definition:      functionDefinition,
-	}
+	}, nil
 }
 
 func Types(path string, root ast.SourceUnit) (types.Map, error) {
