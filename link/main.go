@@ -87,7 +87,10 @@ func main() {
 	if e := json.Unmarshal(bs, &combined); e != nil {
 		log.Fatalln(e)
 	}
-	project := extract.Project(combined)
+	project, e := extract.Project(combined)
+	if e != nil {
+		log.Fatalln("failed extracting type information from AST", e)
+	}
 
 	rpcServer := rpc.NewServer()
 

@@ -10,7 +10,7 @@ import (
 )
 
 // TODO: Windows support: normalize paths to forward slashes without drive letters, etc.
-func Project(combined ast.Combined) types.Project {
+func Project(combined ast.Combined) (types.Project, error) {
 
 	lpp := longestPathPrefix{}
 	for _, path := range combined.SourceList {
@@ -22,7 +22,11 @@ func Project(combined ast.Combined) types.Project {
 		path = lpp.RemovePrefix(path)
 		sourceUnit := ast.UnserializeJSON(source.AST).(ast.SourceUnit)
 		sourceUnits[path] = sourceUnit
-		for id, typ := range Types(path, sourceUnit) {
+		ts, e := Types(path, sourceUnit)
+		if e != nil {
+			return types.Project{}, e
+		}
+		for id, typ := range ts {
 			typeMap[id] = typ
 		}
 	}
@@ -105,7 +109,7 @@ func Project(combined ast.Combined) types.Project {
 		project.Files[contract.File] = contracts
 	}
 
-	return project
+	return project, nil
 
 }
 

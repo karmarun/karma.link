@@ -3,6 +3,7 @@ package extract // import "github.com/karmarun/karma.link/ast/extract"
 
 import (
 	"bytes"
+	"fmt"
 	"github.com/karmarun/karma.link/ast"
 	"github.com/karmarun/karma.link/types"
 	"log"
@@ -127,62 +128,110 @@ func FunctionAPI(functionDefinition ast.FunctionDefinition, typeMap types.Map) t
 	}
 }
 
-func Types(path string, root ast.SourceUnit) types.Map {
+func Types(path string, root ast.SourceUnit) (types.Map, error) {
 	extracted := make(types.Map, 64)
 	contractName := "" // NOTE: we make delicate use of pre-order traversal to fix EventDefinition's canonicalName
+	err := (error)(nil)
 	ast.PreTraverse(root, func(node ast.Node) {
+		if err != nil {
+			return
+		}
+		ref := types.Reference(node.Header().Id)
 		if node, ok := node.(ast.ContractDefinition); ok {
 			contractName = node.Name
-			extracted[types.Reference(node.Header().Id)] = Type(path, node)
+			t, e := Type(path, node)
+			if e != nil {
+				err = e
+				return
+			}
+			extracted[ref] = t
 		}
 		if node, ok := node.(ast.ElementaryTypeName); ok {
-			extracted[types.Reference(node.Header().Id)] = Type(path, node)
+			t, e := Type(path, node)
+			if e != nil {
+				err = e
+				return
+			}
+			extracted[ref] = t
 		}
 		if node, ok := node.(ast.ArrayTypeName); ok {
-			extracted[types.Reference(node.Header().Id)] = Type(path, node)
+			t, e := Type(path, node)
+			if e != nil {
+				err = e
+				return
+			}
+			extracted[ref] = t
 		}
 		if node, ok := node.(ast.EnumDefinition); ok {
-			extracted[types.Reference(node.Header().Id)] = Type(path, node)
+			t, e := Type(path, node)
+			if e != nil {
+				err = e
+				return
+			}
+			extracted[ref] = t
 		}
 		if node, ok := node.(ast.EventDefinition); ok {
 			node.CanonicalName = contractName + "." + node.Name
-			extracted[types.Reference(node.Header().Id)] = Type(path, node)
+			t, e := Type(path, node)
+			if e != nil {
+				err = e
+				return
+			}
+			extracted[ref] = t
 		}
 		if node, ok := node.(ast.StructDefinition); ok {
-			extracted[types.Reference(node.Header().Id)] = Type(path, node)
+			t, e := Type(path, node)
+			if e != nil {
+				err = e
+				return
+			}
+			extracted[ref] = t
 		}
 		if node, ok := node.(ast.Mapping); ok {
-			extracted[types.Reference(node.Header().Id)] = Type(path, node)
+			t, e := Type(path, node)
+			if e != nil {
+				err = e
+				return
+			}
+			extracted[ref] = t
 		}
 		if node, ok := node.(ast.UserDefinedTypeName); ok {
-			extracted[types.Reference(node.Header().Id)] = Type(path, node)
+			t, e := Type(path, node)
+			if e != nil {
+				err = e
+				return
+			}
+			extracted[ref] = t
 		}
 	})
-	return extracted
+	if err != nil {
+		return nil, err
+	}
+	return extracted, nil
 }
 
-func Type(path string, node ast.Node) types.Type {
+func Type(path string, node ast.Node) (types.Type, error) {
 	if node, ok := node.(ast.ContractDefinition); ok {
 		switch node.ContractKind {
 
 		case ast.ContractKindContract:
-			return types.ContractAddress(path + ":" + node.Name)
+			return types.ContractAddress(path + ":" + node.Name), nil
 
 		case ast.ContractKindInterface:
-			return types.InterfaceAddress(path + ":" + node.Name)
+			return types.InterfaceAddress(path + ":" + node.Name), nil
 
 		case ast.ContractKindLibrary:
-			return types.LibraryAddress(path + ":" + node.Name)
+			return types.LibraryAddress(path + ":" + node.Name), nil
 
 		default:
-			log.Fatalln("unexpected contract kind:", node.ContractKind)
+			return nil, fmt.Errorf(`unexpected contract kind: %s`, node.ContractKind)
 		}
 	}
 	if node, ok := node.(ast.UserDefinedTypeName); ok {
-		return types.Reference(node.ReferencedDeclaration)
+		return types.Reference(node.ReferencedDeclaration), nil
 	}
 	if node, ok := node.(ast.ElementaryTypeName); ok {
-		return types.Elementary(node.Type)
+		return types.Elementary(node.Type), nil
 	}
 	if node, ok := node.(ast.ArrayTypeName); ok {
 		return ArrayType(path, node)
@@ -199,20 +248,19 @@ func Type(path string, node ast.Node) types.Type {
 	if node, ok := node.(ast.Mapping); ok {
 		return MappingType(path, node)
 	}
-	log.Fatalf("unexpected ast.Node type in extract.Type: %T", node)
-	return nil // shut up compiler
+	return nil, fmt.Errorf(`unexpected ast.Node type in extract.Type: %T`, node)
 }
 
-func EventType(path string, eventDefinition ast.EventDefinition) types.Named {
+func EventType(path string, eventDefinition ast.EventDefinition) (types.Named, error) {
 
 	children := eventDefinition.Children()
 	if len(children) != 1 {
-		log.Fatalln(`expected eventDefinition to have exactly one child`)
+		return types.Named{}, fmt.Errorf(`expected eventDefinition to have exactly one child`)
 	}
 
 	paramList, ok := children[0].(ast.ParameterList)
 	if !ok {
-		log.Fatalln("eventDefinition's child expected to be ParameterList")
+		return types.Named{}, fmt.Errorf(`eventDefinition's child expected to be ParameterList`)
 	}
 
 	params := paramList.Children()
@@ -221,13 +269,17 @@ func EventType(path string, eventDefinition ast.EventDefinition) types.Named {
 	for i, param := range params {
 		variableDeclaration, ok := param.(ast.VariableDeclaration)
 		if !ok {
-			log.Fatalln("eventDefinition's ParameterList's children expected to be VariableDeclarations")
+			return types.Named{}, fmt.Errorf(`eventDefinition's ParameterList's children expected to be VariableDeclarations`)
 		}
 		varChildren := variableDeclaration.Children()
 		if len(varChildren) != 1 {
-			log.Fatalln("variableDeclaration expected to have 1 child")
+			return types.Named{}, fmt.Errorf(`variableDeclaration expected to have 1 child`)
 		}
-		args[i] = Type(path, varChildren[0])
+		t, e := Type(path, varChildren[0])
+		if e != nil {
+			return types.Named{}, e
+		}
+		args[i] = t
 	}
 
 	return types.Named{
@@ -236,11 +288,11 @@ func EventType(path string, eventDefinition ast.EventDefinition) types.Named {
 			Name: eventDefinition.Name,
 			Args: args,
 		},
-	}
+	}, nil
 
 }
 
-func StructType(path string, structDefinition ast.StructDefinition) types.Named {
+func StructType(path string, structDefinition ast.StructDefinition) (types.Named, error) {
 	children := structDefinition.Children()
 	strct := types.Struct{
 		Keys:  make([]string, len(children), len(children)),
@@ -249,43 +301,52 @@ func StructType(path string, structDefinition ast.StructDefinition) types.Named 
 	for i, child := range children {
 		variableDeclaration, ok := child.(ast.VariableDeclaration)
 		if !ok {
-			log.Fatalln("structDefinition's children expected to be VariableDeclarations")
+			return types.Named{}, fmt.Errorf(`structDefinition's children expected to be VariableDeclarations`)
 		}
 		varChildren := variableDeclaration.Children()
 		if len(varChildren) != 1 {
-			log.Fatalln("variableDeclaration expected to have 1 child")
+			return types.Named{}, fmt.Errorf(`variableDeclaration expected to have 1 child`)
 		}
-		strct.Keys[i], strct.Types[i] = variableDeclaration.Name, Type(path, varChildren[0])
+		strct.Keys[i] = variableDeclaration.Name
+		t, e := Type(path, varChildren[0])
+		if e != nil {
+			return types.Named{}, e
+		}
+		strct.Types[i] = t
 	}
 	return types.Named{
 		Name: path + ":" + structDefinition.CanonicalName,
 		Type: strct,
-	}
+	}, nil
 }
 
-func EnumType(path string, enumDefinition ast.EnumDefinition) types.Named {
+func EnumType(path string, enumDefinition ast.EnumDefinition) (types.Named, error) {
 	children := enumDefinition.Children()
 	enum := make(types.Enum, len(children), len(children))
 	for i, child := range children {
 		enumValue, ok := child.(ast.EnumValue)
 		if !ok {
-			log.Fatalln("enumDefinition's children expected to be EnumValues")
+			return types.Named{}, fmt.Errorf(`enumDefinition's children expected to be EnumValues`)
 		}
 		enum[i] = enumValue.Name
 	}
 	return types.Named{
 		Name: path + ":" + enumDefinition.CanonicalName,
 		Type: enum,
-	}
+	}, nil
 }
 
-func ArrayType(path string, arrayTypeName ast.ArrayTypeName) types.Array {
+func ArrayType(path string, arrayTypeName ast.ArrayTypeName) (types.Array, error) {
 	children := arrayTypeName.Children()
 	if len(children) == 1 {
+		t, e := Type(path, children[0])
+		if e != nil {
+			return types.Array{}, e
+		}
 		return types.Array{
 			Length: types.DynamicArrayLength,
-			Type:   Type(path, children[0]),
-		}
+			Type:   t,
+		}, nil
 	}
 	if len(children) == 2 {
 		// second child is literal of fixed array length, which can be a static expression.
@@ -294,21 +355,32 @@ func ArrayType(path string, arrayTypeName ast.ArrayTypeName) types.Array {
 		lenBytes := nameBytes[bytes.LastIndex(nameBytes, []byte("["))+1 : len(nameBytes)-1]
 		length, e := strconv.ParseInt(string(lenBytes), 10, 64)
 		if e != nil {
-			log.Fatalln(e)
+			return types.Array{}, e
+		}
+		t, e := Type(path, children[0])
+		if e != nil {
+			return types.Array{}, e
 		}
 		return types.Array{
 			Length: int(length),
-			Type:   Type(path, children[0]),
-		}
+			Type:   t,
+		}, nil
 	}
-	log.Fatalln("arrayTypeName expected to have 1 or 2 children")
-	panic("")
+	return types.Array{}, fmt.Errorf(`arrayTypeName expected to have 1 or 2 children`)
 }
 
-func MappingType(path string, mapping ast.Mapping) types.Mapping {
+func MappingType(path string, mapping ast.Mapping) (types.Mapping, error) {
 	children := mapping.Children()
 	if len(children) != 2 {
-		log.Fatalln("mapping expected to have 2 children")
+		return types.Mapping{}, fmt.Errorf(`ast.Mapping expected to have exactly two children`)
 	}
-	return types.Mapping{Type(path, children[0]), Type(path, children[1])}
+	t1, e := Type(path, children[0])
+	if e != nil {
+		return types.Mapping{}, e
+	}
+	t2, e := Type(path, children[1])
+	if e != nil {
+		return types.Mapping{}, e
+	}
+	return types.Mapping{t1, t2}, nil
 }
