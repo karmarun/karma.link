@@ -1,4 +1,5 @@
 // Copyright 2018 karma.run AG. All rights reserved.
+
 package extract // import "github.com/karmarun/karma.link/ast/extract"
 
 import (
@@ -20,7 +21,11 @@ func Project(combined ast.Combined) (types.Project, error) {
 	typeMap, sourceUnits := make(types.Map, 128), make(map[string]ast.SourceUnit, len(combined.Sources))
 	for path, source := range combined.Sources {
 		path = lpp.RemovePrefix(path)
-		sourceUnit := ast.UnserializeJSON(source.AST).(ast.SourceUnit)
+		unserialized, e := ast.UnserializeJSON(source.AST)
+		if e != nil {
+			return types.Project{}, e
+		}
+		sourceUnit := unserialized.(ast.SourceUnit)
 		sourceUnits[path] = sourceUnit
 		ts, e := Types(path, sourceUnit)
 		if e != nil {

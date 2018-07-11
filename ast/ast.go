@@ -1,4 +1,5 @@
 // Copyright 2018 karma.run AG. All rights reserved.
+
 package ast // import "github.com/karmarun/karma.link/ast"
 
 import (
@@ -6,6 +7,7 @@ import (
 	"log"
 )
 
+// ContractKind represents a contract's definition type.
 type ContractKind string
 
 const (
@@ -14,6 +16,7 @@ const (
 	ContractKindLibrary                = "library"
 )
 
+// Visibility represents a Solidity function's visibility.
 type Visibility string
 
 const (
@@ -23,6 +26,7 @@ const (
 	VisibilityPrivate             = "private"
 )
 
+// StateMutability represents a Solidity function's state mutability.
 type StateMutability string
 
 const (
@@ -31,6 +35,7 @@ const (
 	StateMutabilityNonpayable                 = "nonpayable"
 )
 
+// StorageLocation represents a Solidity variables's storage location.
 type StorageLocation string
 
 const (
@@ -39,10 +44,13 @@ const (
 	StorageLocationStorage                 = "storage"
 )
 
+// CompiledContract represents a compiled Solidity contract's binary payload in hex.
 type CompiledContract struct {
 	Binary string `json:"bin"`
 }
 
+// Combined is the top-most node in a Solidity AST.
+// It holds all source files involved in the compilation process.
 type Combined struct {
 	Contracts  map[string]CompiledContract `json:"contracts"`
 	SourceList []string                    `json:"sourceList"`
@@ -50,10 +58,12 @@ type Combined struct {
 	Version    string                      `json:"version"`
 }
 
+// CombinedSource is the raw JSON analog to Combined.
 type CombinedSource struct {
 	AST json.RawMessage `json:"AST"`
 }
 
+// Header holds the common fields every Solidity AST node has.
 type Header struct {
 	Id         int               `json:"id"`
 	Name       string            `json:"name"`
@@ -61,11 +71,14 @@ type Header struct {
 	Attributes json.RawMessage   `json:"attributes"`
 	Children   []json.RawMessage `json:"children"`
 }
+
+// Node represents a Solidity AST node.
 type Node interface {
 	Header() Header
 	Children() []Node
 }
 
+// SourceUnit bundles all Solidity definitions from a single file.
 type SourceUnit struct {
 	header          Header
 	children        []Node
@@ -73,12 +86,14 @@ type SourceUnit struct {
 	ExportedSymbols map[string][]int `json:"exportedSymbols"`
 }
 
+// PragmaDirective represents a Solidity file-level pragma declaration.
 type PragmaDirective struct {
 	header   Header
 	children []Node
 	Literals []string `json:"literals"`
 }
 
+// ContractDefinition represents a contract definition in a Solidity AST.
 type ContractDefinition struct {
 	header                  Header
 	children                []Node
@@ -92,6 +107,7 @@ type ContractDefinition struct {
 	// ContractDependencies json.RawMessage `json:"contractDependencies"`
 }
 
+// StructDefinition represents a struct definition in a Solidity AST.
 type StructDefinition struct {
 	header        Header
 	children      []Node
@@ -101,6 +117,7 @@ type StructDefinition struct {
 	Visibility    Visibility `json:"visibility"`
 }
 
+// VariableDeclaration represents a variable declaration in a Solidity AST.
 type VariableDeclaration struct {
 	header          Header
 	children        []Node
@@ -114,12 +131,14 @@ type VariableDeclaration struct {
 	// Value        json.RawMessage `json:"value"`
 }
 
+// ElementaryTypeName represents an elementary type name in a Solidity AST.
 type ElementaryTypeName struct {
 	header Header
 	Name   string `json:"name"`
 	Type   string `json:"type"`
 }
 
+// ModifierDefinition represents a modifier definition in a Solidity AST.
 type ModifierDefinition struct {
 	header     Header
 	children   []Node
@@ -128,11 +147,14 @@ type ModifierDefinition struct {
 	// Documentation json.RawMessage `json:"documentation"`
 }
 
+// ParameterList represents a list of types in a Solidity AST.
+// It is not used exclusively in function parameter declarations.
 type ParameterList struct {
 	header   Header
 	children []Node
 }
 
+// FunctionDefinition represents a function definition in a Solidity AST.
 type FunctionDefinition struct {
 	header          Header
 	children        []Node
@@ -148,6 +170,7 @@ type FunctionDefinition struct {
 	// SuperFunction   json.RawMessage `json:"superFunction"` //": null,
 }
 
+// UserDefinedTypeName represents a user defined type name (e.g. enums, structs) in a Solidity AST.
 type UserDefinedTypeName struct {
 	header                Header
 	children              []Node
@@ -157,12 +180,14 @@ type UserDefinedTypeName struct {
 	// ContractScope         json.RawMessage `json:"contractScope"`
 }
 
+// ModifierInvocation represents a modifier invokation in a Solidity AST.
 type ModifierInvocation struct {
 	header   Header
 	children []Node
 	// Arguments json.RawMessage `json:"arguments"`
 }
 
+// Identifier represents any identifier in a Solidity AST.
 type Identifier struct {
 	header                Header
 	children              []Node
@@ -173,12 +198,14 @@ type Identifier struct {
 	// Type                   json.RawMessage `json:"type"`
 }
 
+// InheritanceSpecifier represents an inheritance specifier (`contract X is Y, Z`) in a Solidity AST.
 type InheritanceSpecifier struct {
 	header   Header
 	children []Node
 	// Arguments json.RawMessage `json:"arguments"`
 }
 
+// EnumDefinition represents an enum definition in a Solidity AST.
 type EnumDefinition struct {
 	header        Header
 	children      []Node
@@ -186,29 +213,34 @@ type EnumDefinition struct {
 	Name          string `json:"name"`
 }
 
+// EnumValue represents each element in an enum definition in a Solidity AST.
 type EnumValue struct {
 	header   Header
 	children []Node
 	Name     string `json:"name"`
 }
 
+// Mapping represents a mapping definiton in a Solidity AST.
 type Mapping struct {
 	header   Header
 	children []Node
 	Type     string `json:"type"`
 }
 
+// ArrayTypeName represents an array-type's name (e.g. "int32[8]") in a Solidity AST.
 type ArrayTypeName struct {
 	header   Header
 	children []Node
 	Type     string `json:"type"`
 }
 
+// UsingForDirective represents the `using X for Y` directive in a Solidity AST.
 type UsingForDirective struct {
 	header   Header
 	children []Node
 }
 
+// Literal represents a literal in a Solidity AST.
 type Literal struct {
 	header          Header
 	Hexvalue        string `json:"hexvalue"`
@@ -223,6 +255,7 @@ type Literal struct {
 	// ArgumentTypes   json.RawMessage `json:"argumentTypes"`
 }
 
+// ImportDirective represents an import declaration in a Solidity AST.
 type ImportDirective struct {
 	header        Header
 	SourceUnit    json.RawMessage `json:"SourceUnit"`
@@ -233,14 +266,17 @@ type ImportDirective struct {
 	UnitAlias     json.RawMessage `json:"unitAlias"`
 }
 
+// IgnoredNode represents a node that we ignored in a Solidity AST.
 type IgnoredNode struct {
 	header Header
 }
 
+// Block represents a function's command-list in a Solidity AST.
 type Block struct {
 	header Header
 }
 
+// EventDefinition represents an even definition in a Solidity AST.
 type EventDefinition struct {
 	header        Header
 	children      []Node
@@ -296,6 +332,7 @@ func (n ImportDirective) Children() []Node      { return nil }
 func (n IgnoredNode) Children() []Node          { return nil }
 func (n EventDefinition) Children() []Node      { return n.children }
 
+// PreTraverse traverses a Node-tree in pre-order.
 func PreTraverse(root Node, f func(Node)) {
 	f(root)
 	for _, child := range root.Children() {
@@ -303,6 +340,7 @@ func PreTraverse(root Node, f func(Node)) {
 	}
 }
 
+// PostTraverse traverses a Node-tree in post-order.
 func PostTraverse(root Node, f func(Node)) {
 	for _, child := range root.Children() {
 		PostTraverse(child, f)
@@ -310,202 +348,267 @@ func PostTraverse(root Node, f func(Node)) {
 	f(root)
 }
 
-func UnserializeJSON(raw json.RawMessage) Node {
+// UnserializeJSON parses a raw JSON AST representation into a Node tree.
+func UnserializeJSON(raw json.RawMessage) (Node, error) {
 	header := Header{}
 	if e := json.Unmarshal(raw, &header); e != nil {
-		log.Fatalln(e)
+		return nil, e
 	}
 	switch header.Name {
 	case "SourceUnit":
 		sourceUnit := SourceUnit{header: header}
 		if e := json.Unmarshal(header.Attributes, &sourceUnit); e != nil {
-			log.Fatalln(e)
+			return nil, e
 		}
 		for _, child := range header.Children {
-			sourceUnit.children = append(sourceUnit.children, UnserializeJSON(child))
+			u, e := UnserializeJSON(child)
+			if e != nil {
+				return nil, e
+			}
+			sourceUnit.children = append(sourceUnit.children, u)
 		}
-		return sourceUnit
+		return sourceUnit, nil
 
 	case "PragmaDirective":
 		pragmaDirective := PragmaDirective{header: header}
 		if e := json.Unmarshal(header.Attributes, &pragmaDirective); e != nil {
-			log.Fatalln(e)
+			return nil, e
 		}
 		for _, child := range header.Children {
-			pragmaDirective.children = append(pragmaDirective.children, UnserializeJSON(child))
+			u, e := UnserializeJSON(child)
+			if e != nil {
+				return nil, e
+			}
+			pragmaDirective.children = append(pragmaDirective.children, u)
 		}
-		return pragmaDirective
+		return pragmaDirective, nil
 
 	case "ContractDefinition":
 		contractDefinition := ContractDefinition{header: header}
 		if e := json.Unmarshal(header.Attributes, &contractDefinition); e != nil {
-			log.Fatalln(e)
+			return nil, e
 		}
 		for _, child := range header.Children {
-			contractDefinition.children = append(contractDefinition.children, UnserializeJSON(child))
+			u, e := UnserializeJSON(child)
+			if e != nil {
+				return nil, e
+			}
+			contractDefinition.children = append(contractDefinition.children, u)
 		}
-		return contractDefinition
+		return contractDefinition, nil
 
 	case "EventDefinition":
 		eventDefinition := EventDefinition{header: header}
 		if e := json.Unmarshal(header.Attributes, &eventDefinition); e != nil {
-			log.Fatalln(e)
+			return nil, e
 		}
 		for _, child := range header.Children {
-			eventDefinition.children = append(eventDefinition.children, UnserializeJSON(child))
+			u, e := UnserializeJSON(child)
+			if e != nil {
+				return nil, e
+			}
+			eventDefinition.children = append(eventDefinition.children, u)
 		}
-		return eventDefinition
+		return eventDefinition, nil
 
 	case "StructDefinition":
 		structDefinition := StructDefinition{header: header}
 		if e := json.Unmarshal(header.Attributes, &structDefinition); e != nil {
-			log.Fatalln(e)
+			return nil, e
 		}
 		for _, child := range header.Children {
-			structDefinition.children = append(structDefinition.children, UnserializeJSON(child))
+			u, e := UnserializeJSON(child)
+			if e != nil {
+				return nil, e
+			}
+			structDefinition.children = append(structDefinition.children, u)
 		}
-		return structDefinition
+		return structDefinition, nil
 
 	case "VariableDeclaration":
 		variableDeclaration := VariableDeclaration{header: header}
 		if e := json.Unmarshal(header.Attributes, &variableDeclaration); e != nil {
-			log.Fatalln(e)
+			return nil, e
 		}
 		for _, child := range header.Children {
-			variableDeclaration.children = append(variableDeclaration.children, UnserializeJSON(child))
+			u, e := UnserializeJSON(child)
+			if e != nil {
+				return nil, e
+			}
+			variableDeclaration.children = append(variableDeclaration.children, u)
 		}
-		return variableDeclaration
+		return variableDeclaration, nil
 
 	case "ElementaryTypeName":
 		elementaryTypeName := ElementaryTypeName{header: header}
 		if e := json.Unmarshal(header.Attributes, &elementaryTypeName); e != nil {
-			log.Fatalln(e)
+			return nil, e
 		}
-		return elementaryTypeName
+		return elementaryTypeName, nil
 
 	case "ModifierDefinition":
 		modifierDefinition := ModifierDefinition{header: header}
 		if e := json.Unmarshal(header.Attributes, &modifierDefinition); e != nil {
-			log.Fatalln(e)
+			return nil, e
 		}
 		for _, child := range header.Children {
-			modifierDefinition.children = append(modifierDefinition.children, UnserializeJSON(child))
+			u, e := UnserializeJSON(child)
+			if e != nil {
+				return nil, e
+			}
+			modifierDefinition.children = append(modifierDefinition.children, u)
 		}
-		return modifierDefinition
+		return modifierDefinition, nil
 
 	case "ParameterList":
 		parameterList := ParameterList{header: header}
 		for _, child := range header.Children {
-			parameterList.children = append(parameterList.children, UnserializeJSON(child))
+			u, e := UnserializeJSON(child)
+			if e != nil {
+				return nil, e
+			}
+			parameterList.children = append(parameterList.children, u)
 		}
-		return parameterList
+		return parameterList, nil
 
 	case "FunctionDefinition":
 		functionDefinition := FunctionDefinition{}
 		if e := json.Unmarshal(header.Attributes, &functionDefinition); e != nil {
-			log.Fatalln(e)
+			return nil, e
 		}
 		for _, child := range header.Children {
-			functionDefinition.children = append(functionDefinition.children, UnserializeJSON(child))
+			u, e := UnserializeJSON(child)
+			if e != nil {
+				return nil, e
+			}
+			functionDefinition.children = append(functionDefinition.children, u)
 		}
-		return functionDefinition
+		return functionDefinition, nil
 
 	case "ModifierInvocation":
 		modifierInvocation := ModifierInvocation{header: header}
 		if e := json.Unmarshal(header.Attributes, &modifierInvocation); e != nil {
-			log.Fatalln(e)
+			return nil, e
 		}
 		for _, child := range header.Children {
-			modifierInvocation.children = append(modifierInvocation.children, UnserializeJSON(child))
+			u, e := UnserializeJSON(child)
+			if e != nil {
+				return nil, e
+			}
+			modifierInvocation.children = append(modifierInvocation.children, u)
 		}
-		return modifierInvocation
+		return modifierInvocation, nil
 
 	case "UserDefinedTypeName":
 		userDefinedTypeName := UserDefinedTypeName{header: header}
 		if e := json.Unmarshal(header.Attributes, &userDefinedTypeName); e != nil {
-			log.Fatalln(e)
+			return nil, e
 		}
-		return userDefinedTypeName
+		return userDefinedTypeName, nil
 
 	case "Identifier":
 		identifier := Identifier{header: header}
 		if e := json.Unmarshal(header.Attributes, &identifier); e != nil {
-			log.Fatalln(e)
+			return nil, e
 		}
 		for _, child := range header.Children {
-			identifier.children = append(identifier.children, UnserializeJSON(child))
+			u, e := UnserializeJSON(child)
+			if e != nil {
+				return nil, e
+			}
+			identifier.children = append(identifier.children, u)
 		}
-		return identifier
+		return identifier, nil
 
 	case "InheritanceSpecifier":
 		inheritanceSpecifier := InheritanceSpecifier{header: header}
 		for _, child := range header.Children {
-			inheritanceSpecifier.children = append(inheritanceSpecifier.children, UnserializeJSON(child))
+			u, e := UnserializeJSON(child)
+			if e != nil {
+				return nil, e
+			}
+			inheritanceSpecifier.children = append(inheritanceSpecifier.children, u)
 		}
-		return inheritanceSpecifier
+		return inheritanceSpecifier, nil
 
 	case "UsingForDirective":
 		usingForDirective := UsingForDirective{header: header}
 		for _, child := range header.Children {
-			usingForDirective.children = append(usingForDirective.children, UnserializeJSON(child))
+			u, e := UnserializeJSON(child)
+			if e != nil {
+				return nil, e
+			}
+			usingForDirective.children = append(usingForDirective.children, u)
 		}
-		return usingForDirective
+		return usingForDirective, nil
 
 	case "EnumDefinition":
 		enumDefinition := EnumDefinition{header: header}
 		if e := json.Unmarshal(header.Attributes, &enumDefinition); e != nil {
-			log.Fatalln(e)
+			return nil, e
 		}
 		for _, child := range header.Children {
-			enumDefinition.children = append(enumDefinition.children, UnserializeJSON(child))
+			u, e := UnserializeJSON(child)
+			if e != nil {
+				return nil, e
+			}
+			enumDefinition.children = append(enumDefinition.children, u)
 		}
-		return enumDefinition
+		return enumDefinition, nil
 
 	case "Mapping":
 		mapping := Mapping{header: header}
 		if e := json.Unmarshal(header.Attributes, &mapping); e != nil {
-			log.Fatalln(e)
+			return nil, e
 		}
 		for _, child := range header.Children {
-			mapping.children = append(mapping.children, UnserializeJSON(child))
+			u, e := UnserializeJSON(child)
+			if e != nil {
+				return nil, e
+			}
+			mapping.children = append(mapping.children, u)
 		}
-		return mapping
+		return mapping, nil
 
 	case "ArrayTypeName":
 		arrayTypeName := ArrayTypeName{header: header}
 		if e := json.Unmarshal(header.Attributes, &arrayTypeName); e != nil {
-			log.Fatalln(e)
+			return nil, e
 		}
 		for _, child := range header.Children {
-			arrayTypeName.children = append(arrayTypeName.children, UnserializeJSON(child))
+			u, e := UnserializeJSON(child)
+			if e != nil {
+				return nil, e
+			}
+			arrayTypeName.children = append(arrayTypeName.children, u)
 		}
-		return arrayTypeName
+		return arrayTypeName, nil
 
 	case "ImportDirective":
 		importDirective := ImportDirective{header: header}
 		if e := json.Unmarshal(header.Attributes, &importDirective); e != nil {
-			log.Fatalln(e)
+			return nil, e
 		}
-		return importDirective
+		return importDirective, nil
 
 	case "EnumValue":
 		enumValue := EnumValue{header: header}
 		if e := json.Unmarshal(header.Attributes, &enumValue); e != nil {
-			log.Fatalln(e)
+			return nil, e
 		}
-		return enumValue
+		return enumValue, nil
 
 	case "Literal":
 		literal := Literal{header: header}
 		if e := json.Unmarshal(header.Attributes, &literal); e != nil {
-			log.Fatalln(e)
+			return nil, e
 		}
-		return literal
+		return literal, nil
 
 	case "Block":
-		return Block{header: header}
+		return Block{header: header}, nil
 
 	}
 	log.Println("ignoring AST node type:", header.Name)
-	return IgnoredNode{header: header}
+	return IgnoredNode{header: header}, nil
 }
