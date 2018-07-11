@@ -11,6 +11,8 @@ import (
 	"unicode/utf8"
 )
 
+// Decode translates Solidity ABI-encoded code into JSON, using typ as reference.
+// typ is usually of type types.Tuple representing a Solidity function return type list.
 func Decode(typ types.Type, code Code) (json.RawMessage, error) {
 	value, _, e := decode(typ, code, 0)
 	if e != nil {

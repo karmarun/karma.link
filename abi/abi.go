@@ -9,6 +9,7 @@ import (
 	"math/big"
 )
 
+// Code represents a Solidity ABI-encoded payload.
 type Code []byte
 
 var logger = log.New(config.LogWriter, `abi`, config.LogFlags)

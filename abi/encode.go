@@ -10,6 +10,8 @@ import (
 	"strings"
 )
 
+// Encode translates JSON into  Solidity ABI-encoded code, using typ as reference.
+// typ is usually of type types.Tuple representing a Solidity function parameter list.
 func Encode(typ types.Type, arg json.RawMessage) (Code, error) {
 	head, tail, e := encode(typ, arg, 0, make([]byte, 0, 1024), make([]byte, 0, 1024))
 	if e != nil {
