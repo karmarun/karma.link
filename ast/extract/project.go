@@ -10,6 +10,9 @@ import (
 	"strings"
 )
 
+// Project extracts an entire smart contract project's combined type information and structure.
+// It will remove the longest shared path prefix among all source units (solidity files).
+// E.g. files "a/x/b.sol" and "a/c.sol" will be referenced as "x/b.sol" and "c.sol", respectively.
 // TODO: Windows support: normalize paths to forward slashes without drive letters, etc.
 func Project(combined ast.Combined) (types.Project, error) {
 

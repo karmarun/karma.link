@@ -10,6 +10,7 @@ import (
 	"strconv"
 )
 
+// ContractDefinitions extracts all ast.ContractDefinition's from an ast.SourceUnit.
 func ContractDefinitions(root ast.SourceUnit) []ast.ContractDefinition {
 	children := root.Children()
 	definitions := make([]ast.ContractDefinition, 0, len(children))
@@ -21,6 +22,10 @@ func ContractDefinitions(root ast.SourceUnit) []ast.ContractDefinition {
 	return definitions
 }
 
+// ContractAPI extracts all functions from a ast.ContractDefinition.
+// Remember that public top-level variables in Solidity export automatic getter functions.
+// These functions are also part of the extracted API.
+// typeMap is used to resolve type references in the process.
 func ContractAPI(contractDefinition ast.ContractDefinition, typeMap types.Map) ([]types.Function, error) {
 	children := contractDefinition.Children()
 	extracted := make([]types.Function, 0, len(children))
@@ -46,7 +51,8 @@ func ContractAPI(contractDefinition ast.ContractDefinition, typeMap types.Map) (
 	return extracted, nil
 }
 
-// REMEMBER: public/external variables also part of API as (getter) functions
+// VariableAPI extracts the generated getter function that public top-level
+// contract variables get automatically in Solidity.
 func VariableAPI(variableDeclaration ast.VariableDeclaration, typeMap types.Map) types.Function {
 
 	typeId := variableDeclaration.Children()[0].Header().Id
@@ -79,6 +85,7 @@ func variableAccessor(typ types.Type, typeMap types.Map, prev []types.Type) ([]t
 	return prev, concreteType
 }
 
+// FunctionAPI extracts an ast.FunctionDefinition's type information.
 func FunctionAPI(functionDefinition ast.FunctionDefinition, typeMap types.Map) (types.Function, error) {
 
 	children := functionDefinition.Children()
@@ -131,6 +138,7 @@ func FunctionAPI(functionDefinition ast.FunctionDefinition, typeMap types.Map) (
 	}, nil
 }
 
+// Types extracts all type definitions and references from an ast.SourceUnit.
 func Types(path string, root ast.SourceUnit) (types.Map, error) {
 	extracted := make(types.Map, 64)
 	contractName := "" // NOTE: we make delicate use of pre-order traversal to fix EventDefinition's canonicalName
@@ -213,6 +221,16 @@ func Types(path string, root ast.SourceUnit) (types.Map, error) {
 	return extracted, nil
 }
 
+// Type extracts type information from an AST node which may be any of:
+// ast.ContractDefinition,
+// ast.UserDefinedTypeName,
+// ast.ElementaryTypeName,
+// ast.ArrayTypeName,
+// ast.EnumDefinition,
+// ast.StructDefinition,
+// ast.EventDefinition,
+// ast.Mapping.
+// It returns an error for everything else.
 func Type(path string, node ast.Node) (types.Type, error) {
 	if node, ok := node.(ast.ContractDefinition); ok {
 		switch node.ContractKind {
@@ -254,6 +272,7 @@ func Type(path string, node ast.Node) (types.Type, error) {
 	return nil, fmt.Errorf(`unexpected ast.Node type in extract.Type: %T`, node)
 }
 
+// EventType extracts a named types.Event from an ast.EventDefinition.
 func EventType(path string, eventDefinition ast.EventDefinition) (types.Named, error) {
 
 	children := eventDefinition.Children()
@@ -295,6 +314,7 @@ func EventType(path string, eventDefinition ast.EventDefinition) (types.Named, e
 
 }
 
+// StructType extracts a named types.Struct from an ast.StructDefinition.
 func StructType(path string, structDefinition ast.StructDefinition) (types.Named, error) {
 	children := structDefinition.Children()
 	strct := types.Struct{
@@ -323,6 +343,7 @@ func StructType(path string, structDefinition ast.StructDefinition) (types.Named
 	}, nil
 }
 
+// EnumType extracts a named types.Enum from an ast.EnumDefinition.
 func EnumType(path string, enumDefinition ast.EnumDefinition) (types.Named, error) {
 	children := enumDefinition.Children()
 	enum := make(types.Enum, len(children), len(children))
@@ -339,6 +360,7 @@ func EnumType(path string, enumDefinition ast.EnumDefinition) (types.Named, erro
 	}, nil
 }
 
+// EnumType extracts a types.Array from an ast.ArrayTypeName.
 func ArrayType(path string, arrayTypeName ast.ArrayTypeName) (types.Array, error) {
 	children := arrayTypeName.Children()
 	if len(children) == 1 {
@@ -372,6 +394,7 @@ func ArrayType(path string, arrayTypeName ast.ArrayTypeName) (types.Array, error
 	return types.Array{}, fmt.Errorf(`arrayTypeName expected to have 1 or 2 children`)
 }
 
+// MappingType extracts a types.Mapping from an ast.Mapping.
 func MappingType(path string, mapping ast.Mapping) (types.Mapping, error) {
 	children := mapping.Children()
 	if len(children) != 2 {
