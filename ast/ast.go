@@ -220,7 +220,7 @@ type EnumValue struct {
 	Name     string `json:"name"`
 }
 
-// Mapping represents a mapping definiton in a Solidity AST.
+// Mapping represents a mapping definition in a Solidity AST.
 type Mapping struct {
 	header   Header
 	children []Node

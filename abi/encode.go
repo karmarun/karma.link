@@ -145,7 +145,7 @@ func encode(typ types.Type, arg json.RawMessage, tailOffset int, head, tail []by
 			// TODO: support fixed<M>x<N> and ufixed<M>x<N>
 			return nil, nil, fmt.Errorf(`fixed/ufixed types not supported yet`)
 		}
-		// TODO: suspected bug in large integers; differenciate between int and uint
+		// TODO: suspected bug in large integers; differentiate between int and uint
 		if strings.HasPrefix(id, `int`) || strings.HasPrefix(id, `uint`) {
 			bits := 0
 			{
