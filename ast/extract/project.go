@@ -3,9 +3,9 @@ package extract // import "github.com/karmarun/karma.link/ast/extract"
 
 import (
 	"encoding/hex"
+	"fmt"
 	"github.com/karmarun/karma.link/ast"
 	"github.com/karmarun/karma.link/types"
-	"log"
 	"strings"
 )
 
@@ -63,7 +63,7 @@ func Project(combined ast.Combined) (types.Project, error) {
 			if compiled, ok := combined.Contracts[lpp.PrependPrefix(path)+`:`+contractDefinition.Name]; ok {
 				bs, e := hex.DecodeString(compiled.Binary)
 				if e != nil {
-					log.Fatalln(`invalid binary in contract`, path)
+					return types.Project{}, fmt.Errorf(`invalid binary in contract: %s`, path)
 				}
 				bin = bs
 			}
@@ -94,7 +94,7 @@ func Project(combined ast.Combined) (types.Project, error) {
 		for _, parentId := range contract.Definition.LinearizedBaseContracts[1:] {
 			parent, ok := contractMap[parentId]
 			if !ok {
-				log.Fatalln("missing contract parent definition")
+				return types.Project{}, fmt.Errorf(`missing contract parent definition`)
 			}
 			contract.Parents = append(contract.Parents, parent)
 		}
