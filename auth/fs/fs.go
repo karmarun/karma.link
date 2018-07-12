@@ -1,4 +1,5 @@
 // Copyright 2018 karma.run AG. All rights reserved.
+
 package fs // import "github.com/karmarun/karma.link/auth/fs"
 
 import (
@@ -43,17 +44,20 @@ func rotateEntropy() {
 	randomness.Store(s)
 }
 
+// Folder is an implementation of auth.Authenticator that serves private keys from a folder path.
 type Folder string
 
 var (
 	_ auth.Authenticator = Folder("")
 )
 
+// Credentials is the authentication JSON structure used in Folder.Authenticate
 type Credentials struct {
 	FilePath   []string `json:"filepath"`
 	Passphrase string   `json:"passphrase"`
 }
 
+// Token represents the carrier token structure returned by Folder.Authenticate
 type Token struct {
 	Address string `json:"address"`
 	Secret  string `json:"secret"`
@@ -64,6 +68,8 @@ const maxKeyFileSize = 1024 * 1024 // 1MB
 
 var authenticated = &sync.Map{}
 
+// Authenticate parses credentials as Credentials and attempts to authenticate them.
+// It follows the rules specified in auth.Authenticator.
 func (f Folder) Authenticate(credentials json.RawMessage) (json.RawMessage, error) {
 	creds := Credentials{}
 	if e := json.Unmarshal(credentials, &creds); e != nil {
@@ -128,6 +134,8 @@ func (f Folder) Authenticate(credentials json.RawMessage) (json.RawMessage, erro
 	return bs, nil
 }
 
+// ExchangeToken exchanges a previously issued Token for an auth.Key.
+// It follows the rules specified in auth.Authenticator.
 func (f Folder) ExchangeToken(token json.RawMessage) (*auth.Key, error) {
 	tok := Token{}
 	if e := json.Unmarshal(token, &tok); e != nil {
