@@ -1,4 +1,5 @@
 // Copyright 2018 karma.run AG. All rights reserved.
+
 package main // import "github.com/karmarun/karma.link/link"
 
 import (

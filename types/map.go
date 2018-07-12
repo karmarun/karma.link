@@ -1,4 +1,5 @@
 // Copyright 2018 karma.run AG. All rights reserved.
+
 package types // import "github.com/karmarun/karma.link/types"
 
 type Map map[Reference]Type
