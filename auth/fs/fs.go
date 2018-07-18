@@ -4,7 +4,6 @@ package fs // import "github.com/karmarun/karma.link/auth/fs"
 
 import (
 	"crypto/rand"
-	"crypto/sha512"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -16,33 +15,14 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
-	"sync/atomic"
 	"time"
 )
 
 var logger = log.New(config.LogWriter, `auth/fs`, config.LogFlags)
 
-const tokenExpiration = (15 * time.Minute)
-
-var randomness = &atomic.Value{}
-
-func init() {
-	rotateEntropy()
-	go func() {
-		for {
-			time.Sleep(time.Minute)
-			rotateEntropy()
-		}
-	}()
-}
-
-func rotateEntropy() {
-	s := make([]byte, 1024, 1024)
-	if _, e := rand.Read(s); e != nil {
-		panic(e)
-	}
-	randomness.Store(s)
-}
+const (
+	tokenExpiration = (15 * time.Minute)
+)
 
 // Folder is an implementation of auth.Authenticator that serves private keys from a folder path.
 type Folder string
@@ -98,25 +78,12 @@ func (f Folder) Authenticate(credentials json.RawMessage) (json.RawMessage, erro
 	if e != nil {
 		return nil, fmt.Errorf(`invalid credentials`)
 	}
-	timestamp, e := time.Now().MarshalBinary()
-	if e != nil {
-		logger.Println("error marshalling timestamp", e)
-		return nil, fmt.Errorf(`internal error (has been logged)`)
+	randomness := make([]byte, 128, 128)
+	if _, e := rand.Read(randomness); e != nil {
+		logger.Println("rand.Read returned error", e)
+		return nil, fmt.Errorf(`internal error`)
 	}
-	hash := sha512.New()
-	if _, e := hash.Write(timestamp); e != nil {
-		panic(e) // should never happen
-	}
-	if _, e := hash.Write([]byte(path)); e != nil {
-		panic(e) // should never happen
-	}
-	if _, e := hash.Write([]byte(creds.Passphrase)); e != nil {
-		panic(e) // should never happen
-	}
-	if _, e := hash.Write(randomness.Load().([]byte)); e != nil {
-		panic(e) // should never happen
-	}
-	secret := base64.StdEncoding.EncodeToString(hash.Sum(nil))
+	secret := base64.StdEncoding.EncodeToString(randomness)
 	authenticated.Store(secret, key)
 	time.AfterFunc(tokenExpiration, func() {
 		authenticated.Delete(secret)
@@ -129,7 +96,40 @@ func (f Folder) Authenticate(credentials json.RawMessage) (json.RawMessage, erro
 	if e != nil {
 		authenticated.Delete(secret)
 		logger.Println("failed marshalling token", e)
-		return nil, fmt.Errorf(`internal error (has been logged)`)
+		return nil, fmt.Errorf(`internal error`)
+	}
+	return bs, nil
+}
+
+func (f Folder) RenewToken(oldToken json.RawMessage) (json.RawMessage, error) {
+	tok, e := parseToken(oldToken)
+	if e != nil {
+		return nil, e
+	}
+	loaded, ok := authenticated.Load(tok.Secret)
+	if !ok {
+		return nil, fmt.Errorf(`invalid token`)
+	}
+	randomness := make([]byte, 128, 128)
+	if _, e := rand.Read(randomness); e != nil {
+		logger.Println("rand.Read returned error", e)
+		return nil, fmt.Errorf(`internal error`)
+	}
+	secret := base64.StdEncoding.EncodeToString(randomness)
+	key := loaded.(*auth.Key)
+	authenticated.Store(secret, key)
+	time.AfterFunc(tokenExpiration, func() {
+		authenticated.Delete(secret)
+	})
+	bs, e := json.Marshal(Token{
+		Address: key.Address.Hex(),
+		Secret:  secret,
+		Expires: time.Now().Add(tokenExpiration).Format(time.RFC3339),
+	})
+	if e != nil {
+		authenticated.Delete(secret)
+		logger.Println("failed marshalling token", e)
+		return nil, fmt.Errorf(`internal error`)
 	}
 	return bs, nil
 }
@@ -137,6 +137,22 @@ func (f Folder) Authenticate(credentials json.RawMessage) (json.RawMessage, erro
 // ExchangeToken exchanges a previously issued Token for an auth.Key.
 // It follows the rules specified in auth.Authenticator.
 func (f Folder) ExchangeToken(token json.RawMessage) (*auth.Key, error) {
+	tok, e := parseToken(token)
+	if e != nil {
+		return nil, e
+	}
+	loaded, ok := authenticated.Load(tok.Secret)
+	if !ok {
+		return nil, fmt.Errorf(`invalid token`)
+	}
+	key := loaded.(*keystore.Key)
+	return &auth.Key{
+		Address:    key.Address,
+		PrivateKey: key.PrivateKey,
+	}, nil
+}
+
+func parseToken(token json.RawMessage) (*Token, error) {
 	tok := Token{}
 	if e := json.Unmarshal(token, &tok); e != nil {
 		return nil, fmt.Errorf(`invalid token`)
@@ -148,13 +164,5 @@ func (f Folder) ExchangeToken(token json.RawMessage) (*auth.Key, error) {
 	if time.Now().After(expiry) {
 		return nil, fmt.Errorf(`token expired`)
 	}
-	loaded, ok := authenticated.Load(tok.Secret)
-	if !ok {
-		return nil, fmt.Errorf(`invalid token`)
-	}
-	key := loaded.(*keystore.Key)
-	return &auth.Key{
-		Address:    key.Address,
-		PrivateKey: key.PrivateKey,
-	}, nil
+	return &tok, nil
 }

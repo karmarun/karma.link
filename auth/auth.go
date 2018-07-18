@@ -22,6 +22,7 @@ type Key struct {
 // token that the client may use later in ExchangeToken.
 type Authenticator interface {
 	Authenticate(credentials json.RawMessage) (token json.RawMessage, e error)
+	RenewToken(oldToken json.RawMessage) (newToken json.RawMessage, e error)
 	ExchangeToken(token json.RawMessage) (*Key, error)
 }
 
