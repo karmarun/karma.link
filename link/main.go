@@ -462,6 +462,7 @@ func (h RpcHandler) DispatchFunctionCall(req DispatchFunctionCallRequest, res *D
 	if e != nil {
 		return e // TODO: better errors
 	}
+	defer key.Destroy()
 
 	target := common.HexToAddress(req.Target)
 
@@ -640,6 +641,7 @@ func (h RpcHandler) CreateContract(req CreateContractRequest, res *TransactionRe
 	if e != nil {
 		return e
 	}
+	defer key.Destroy()
 
 	nonce := uint64(0)
 	{

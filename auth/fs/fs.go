@@ -39,7 +39,6 @@ type Credentials struct {
 
 // Token represents the carrier token structure returned by Folder.Authenticate
 type Token struct {
-	Address string `json:"address"`
 	Secret  string `json:"secret"`
 	Expires string `json:"expires"`
 }
@@ -47,6 +46,8 @@ type Token struct {
 const maxKeyFileSize = 1024 * 1024 // 1MB
 
 var authenticated = &sync.Map{}
+
+const secretLen = auth.KeyBytesLen + 32
 
 // Authenticate parses credentials as Credentials and attempts to authenticate them.
 // It follows the rules specified in auth.Authenticator.
@@ -74,27 +75,41 @@ func (f Folder) Authenticate(credentials json.RawMessage) (json.RawMessage, erro
 		logger.Println("error reading key file", path, e)
 		return nil, fmt.Errorf(`error opening key file`) // intentionally vague
 	}
-	key, e := keystore.DecryptKey(bs, creds.Passphrase)
-	if e != nil {
-		return nil, fmt.Errorf(`invalid credentials`)
+	key := (*auth.Key)(nil)
+	{
+		decrypted, e := keystore.DecryptKey(bs, creds.Passphrase)
+		if e != nil {
+			return nil, fmt.Errorf(`invalid credentials`)
+		}
+		key = &auth.Key{Address: decrypted.Address, PrivateKey: decrypted.PrivateKey}
+		decrypted = nil
 	}
-	randomness := make([]byte, 128, 128)
+	keyBytes := auth.KeyToBytes(key)
+
+	randomness := make([]byte, secretLen, secretLen)
 	if _, e := rand.Read(randomness); e != nil {
 		logger.Println("rand.Read returned error", e)
 		return nil, fmt.Errorf(`internal error`)
 	}
-	secret := base64.StdEncoding.EncodeToString(randomness)
-	authenticated.Store(secret, key)
+
+	index := [32]byte{}
+	copy(index[:], randomness[:32])
+	xorKeyBytes(keyBytes, randomness[32:])
+
+	authenticated.Store(index, *keyBytes)
+	keyBytes.Destroy()
+	keyBytes = nil
+
 	time.AfterFunc(tokenExpiration, func() {
-		authenticated.Delete(secret)
+		authenticated.Delete(index)
 	})
+
 	bs, e = json.Marshal(Token{
-		Address: key.Address.Hex(),
-		Secret:  secret,
+		Secret:  base64.StdEncoding.EncodeToString(randomness),
 		Expires: time.Now().Add(tokenExpiration).Format(time.RFC3339),
 	})
 	if e != nil {
-		authenticated.Delete(secret)
+		authenticated.Delete(index)
 		logger.Println("failed marshalling token", e)
 		return nil, fmt.Errorf(`internal error`)
 	}
@@ -106,32 +121,52 @@ func (f Folder) RenewToken(oldToken json.RawMessage) (json.RawMessage, error) {
 	if e != nil {
 		return nil, e
 	}
-	loaded, ok := authenticated.Load(tok.Secret)
+	secret, e := base64.StdEncoding.DecodeString(tok.Secret)
+	if e != nil {
+		return nil, fmt.Errorf(`invalid token`)
+	}
+	if len(secret) != secretLen {
+		return nil, fmt.Errorf(`invalid token`)
+	}
+	index := [32]byte{}
+	copy(index[:], secret[:32])
+	loaded, ok := authenticated.Load(index)
 	if !ok {
 		return nil, fmt.Errorf(`invalid token`)
 	}
-	randomness := make([]byte, 128, 128)
+	keyByteArray := loaded.(auth.KeyBytes)
+	keyBytes := &keyByteArray
+	xorKeyBytes(keyBytes, secret[32:])
+
+	randomness := make([]byte, secretLen, secretLen)
 	if _, e := rand.Read(randomness); e != nil {
 		logger.Println("rand.Read returned error", e)
 		return nil, fmt.Errorf(`internal error`)
 	}
-	secret := base64.StdEncoding.EncodeToString(randomness)
-	key := loaded.(*auth.Key)
-	authenticated.Store(secret, key)
+
+	index = [32]byte{}
+	copy(index[:], randomness[:32])
+	xorKeyBytes(keyBytes, randomness[32:])
+
+	authenticated.Store(index, *keyBytes)
+	keyBytes.Destroy()
+	keyBytes = nil
+
 	time.AfterFunc(tokenExpiration, func() {
-		authenticated.Delete(secret)
+		authenticated.Delete(index)
 	})
+
 	bs, e := json.Marshal(Token{
-		Address: key.Address.Hex(),
-		Secret:  secret,
+		Secret:  base64.StdEncoding.EncodeToString(randomness),
 		Expires: time.Now().Add(tokenExpiration).Format(time.RFC3339),
 	})
 	if e != nil {
-		authenticated.Delete(secret)
+		authenticated.Delete(index)
 		logger.Println("failed marshalling token", e)
 		return nil, fmt.Errorf(`internal error`)
 	}
 	return bs, nil
+
 }
 
 // ExchangeToken exchanges a previously issued Token for an auth.Key.
@@ -141,15 +176,23 @@ func (f Folder) ExchangeToken(token json.RawMessage) (*auth.Key, error) {
 	if e != nil {
 		return nil, e
 	}
-	loaded, ok := authenticated.Load(tok.Secret)
+	secret, e := base64.StdEncoding.DecodeString(tok.Secret)
+	if e != nil {
+		return nil, fmt.Errorf(`invalid token`)
+	}
+	if len(secret) != secretLen {
+		return nil, fmt.Errorf(`invalid token`)
+	}
+	index := [32]byte{}
+	copy(index[:], secret[:32])
+	loaded, ok := authenticated.Load(index)
 	if !ok {
 		return nil, fmt.Errorf(`invalid token`)
 	}
-	key := loaded.(*keystore.Key)
-	return &auth.Key{
-		Address:    key.Address,
-		PrivateKey: key.PrivateKey,
-	}, nil
+	keyByteArray := loaded.(auth.KeyBytes)
+	keyBytes := &keyByteArray
+	xorKeyBytes(keyBytes, secret[32:])
+	return auth.BytesToKey(keyBytes), nil
 }
 
 func parseToken(token json.RawMessage) (*Token, error) {
@@ -165,4 +208,24 @@ func parseToken(token json.RawMessage) (*Token, error) {
 		return nil, fmt.Errorf(`token expired`)
 	}
 	return &tok, nil
+}
+
+func xorKeyBytes(bs *auth.KeyBytes, mask []byte) {
+	if len(mask) != auth.KeyBytesLen {
+		panic("precondition violation: len(mask) != auth.KeyBytesLen")
+	}
+	i := 0
+	for ; i < auth.KeyBytesLen-(auth.KeyBytesLen%8); i += 8 {
+		bs[i+0] ^= mask[i+0]
+		bs[i+1] ^= mask[i+1]
+		bs[i+2] ^= mask[i+2]
+		bs[i+3] ^= mask[i+3]
+		bs[i+4] ^= mask[i+4]
+		bs[i+5] ^= mask[i+5]
+		bs[i+6] ^= mask[i+6]
+		bs[i+7] ^= mask[i+7]
+	}
+	for ; i < auth.KeyBytesLen; i++ {
+		bs[i] ^= mask[i]
+	}
 }
