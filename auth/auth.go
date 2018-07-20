@@ -4,12 +4,14 @@ package auth // import "github.com/karmarun/karma.link/auth"
 
 import (
 	"crypto/ecdsa"
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"math/big"
 	"sync"
+	"time"
 )
 
 // Key associates an ecdsa.PrivateKey with an Ethereum address.
@@ -106,10 +108,7 @@ func BytesToKey(bs KeyBytes) (*Key, error) {
 		return nil, fmt.Errorf(`invalid private key`)
 	}
 	bs.Destroy()
-	return &Key{
-		Address:    crypto.PubkeyToAddress(priv.PublicKey),
-		PrivateKey: priv,
-	}, nil
+	return &Key{Address: crypto.PubkeyToAddress(priv.PublicKey), PrivateKey: priv}, nil
 }
 
 // DestroyEcdsaPrivateKey overwrites key's backing storage with zeroes.
@@ -121,4 +120,77 @@ func DestroyEcdsaPrivateKey(key *ecdsa.PrivateKey) {
 	} {
 		copy(words[:cap(words)], zeroWords)
 	}
+}
+
+// KeyStore implements a quick-and-simple, in-memory encrypted key store.
+// It utilizes a one-time pad scheme.
+type KeyStore struct {
+	store *sync.Map
+}
+
+// NewKeyStore makes a new KeyStore
+func NewKeyStore() KeyStore {
+	return KeyStore{&sync.Map{}}
+}
+
+// Write stores plaintext bs for ttl time. If ttl == 0, its stored forever.
+// It returns an index as [32]byte and random bit-mask to use in Read.
+func (s KeyStore) Write(bs KeyBytes, ttl time.Duration) ([32]byte, []byte) {
+	randomness := make([]byte, len(bs)+32, len(bs)+32)
+	if _, e := rand.Read(randomness); e != nil {
+		panic(e)
+	}
+	index := [32]byte{}
+	copy(index[:], randomness[:32])
+	bs = bs.Copy()
+	if e := xorKeyBytes(bs, randomness[32:]); e != nil {
+		panic(e)
+	}
+	s.store.Store(index, bs)
+	if ttl != 0 {
+		time.AfterFunc(ttl, func() {
+			s.store.Delete(index)
+		})
+	}
+	return index, randomness[32:]
+}
+
+// Read reads the encrypted key at index and decrypts it using mask.
+// It returns a non-nil error if the index wasn't found or mask is not of the correct length.
+func (s KeyStore) Read(index [32]byte, mask []byte) (KeyBytes, error) {
+	loaded, ok := s.store.Load(index)
+	if !ok {
+		return nil, fmt.Errorf(`index not found`)
+	}
+	bs := loaded.(KeyBytes).Copy()
+	if e := xorKeyBytes(bs, mask); e != nil {
+		return nil, e
+	}
+	return bs, nil
+}
+
+// Delete removes an index from the store immediately.
+func (s KeyStore) Delete(index [32]byte) {
+	s.store.Delete(index)
+}
+
+func xorKeyBytes(bs KeyBytes, mask []byte) error {
+	if len(bs) != len(mask) {
+		return fmt.Errorf(`key / mask length mismatch`)
+	}
+	i, l := 0, len(bs)
+	for ; i < l-(l%8); i += 8 {
+		bs[i+0] ^= mask[i+0]
+		bs[i+1] ^= mask[i+1]
+		bs[i+2] ^= mask[i+2]
+		bs[i+3] ^= mask[i+3]
+		bs[i+4] ^= mask[i+4]
+		bs[i+5] ^= mask[i+5]
+		bs[i+6] ^= mask[i+6]
+		bs[i+7] ^= mask[i+7]
+	}
+	for ; i < l; i++ {
+		bs[i] ^= mask[i]
+	}
+	return nil
 }
