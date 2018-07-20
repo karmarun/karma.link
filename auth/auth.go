@@ -19,8 +19,8 @@ type Key struct {
 }
 
 var (
-	zeroWords    = make([]big.Word, 32, 32)
-	zeroKeyBytes = KeyBytes{}
+	zeroWords    = make([]big.Word, 256, 256) // large enough for most keys
+	zeroKeyBytes = make(KeyBytes, 256, 256)   // large enough for most keys
 )
 
 // Destroy erases the private key from memory, overwriting it with zeroes.
@@ -38,6 +38,7 @@ type Authenticator interface {
 	Authenticate(credentials json.RawMessage) (token json.RawMessage, e error)
 
 	// RenewToken exchanges an existing token (commonly the one returned by Authenticate) for a new token with a new life time.
+	// The old token may or may not continue to be valid. Normally not.
 	RenewToken(oldToken json.RawMessage) (newToken json.RawMessage, e error)
 
 	// ExchangeToken validates a JSON-encoded token and exchanges it for a *Key if its valid.
@@ -75,42 +76,40 @@ func ExchangeToken(name string, token json.RawMessage) (*Key, error) {
 	return authenticator.(Authenticator).ExchangeToken(token)
 }
 
-const KeyBytesLen = 32*3 + 20
-
 // KeyBytes represents a byte-serialized Key
-type KeyBytes [KeyBytesLen]byte
+type KeyBytes []byte
 
-// Destroy overwrites the *KeyBytes' backing storage with zeroes.
-func (bs *KeyBytes) Destroy() {
-	copy(bs[:], zeroKeyBytes[:])
+// Destroy overwrites bs' backing storage with zeroes.
+func (bs KeyBytes) Destroy() {
+	copy(bs[:cap(bs)], zeroKeyBytes)
 }
 
-// KeyToBytes converts a *Key to *KeyBytes and calls Destroy() on key.
-func KeyToBytes(key *Key) *KeyBytes {
-	bs := KeyBytes{}
-	priv := key.PrivateKey
-	x, y, d := priv.X.Bytes(), priv.Y.Bytes(), priv.D.Bytes()
-	copy(bs[0+32-len(x):], x)
-	copy(bs[32+32-len(y):], y)
-	copy(bs[64+32-len(d):], d)
-	copy(bs[32*3:], key.Address[:])
+// Copy copies bs.
+func (bs KeyBytes) Copy() KeyBytes {
+	cp := make(KeyBytes, len(bs), cap(bs))
+	copy(cp, bs)
+	return cp
+}
+
+// KeyToBytes converts a *Key to KeyBytes and calls Destroy() on key.
+func KeyToBytes(key *Key) KeyBytes {
+	dump := crypto.FromECDSA(key.PrivateKey)
 	key.Destroy()
-	return &bs
+	return KeyBytes(dump)
 }
 
-var zeroBytes = make([]byte, KeyBytesLen, KeyBytesLen)
-
-// BytesToKey converts *KeyBytes to a *Key and calls Destroy() on bs.
-func BytesToKey(bs *KeyBytes) *Key {
-	if len(bs) != KeyBytesLen {
-		panic("BytesToPrivateKey called with byte slice of wrong length, must be KeyBytesLen")
+// BytesToKey converts KeyBytes to a *Key and calls Destroy() on bs (only if successful).
+// It returns a non-nil error for invalid KeyBytes.
+func BytesToKey(bs KeyBytes) (*Key, error) {
+	priv, e := crypto.ToECDSA(bs)
+	if e != nil {
+		return nil, fmt.Errorf(`invalid private key`)
 	}
-	x, y, d := new(big.Int).SetBytes(bs[0*32:1*32]), new(big.Int).SetBytes(bs[1*32:2*32]), new(big.Int).SetBytes(bs[2*32:3*32])
-	addr := common.Address{}
-	copy(addr[:], bs[32*3:])
 	bs.Destroy()
-	pub := ecdsa.PublicKey{X: x, Y: y, Curve: crypto.S256()}
-	return &Key{Address: addr, PrivateKey: &ecdsa.PrivateKey{PublicKey: pub, D: d}}
+	return &Key{
+		Address:    crypto.PubkeyToAddress(priv.PublicKey),
+		PrivateKey: priv,
+	}, nil
 }
 
 // DestroyEcdsaPrivateKey overwrites key's backing storage with zeroes.

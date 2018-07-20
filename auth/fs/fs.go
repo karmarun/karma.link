@@ -47,8 +47,6 @@ const maxKeyFileSize = 1024 * 1024 // 1MB
 
 var authenticated = &sync.Map{}
 
-const secretLen = auth.KeyBytesLen + 32
-
 // Authenticate parses credentials as Credentials and attempts to authenticate them.
 // It follows the rules specified in auth.Authenticator.
 func (f Folder) Authenticate(credentials json.RawMessage) (json.RawMessage, error) {
@@ -86,7 +84,7 @@ func (f Folder) Authenticate(credentials json.RawMessage) (json.RawMessage, erro
 	}
 	keyBytes := auth.KeyToBytes(key)
 
-	randomness := make([]byte, secretLen, secretLen)
+	randomness := make([]byte, len(keyBytes)+32, len(keyBytes)+32)
 	if _, e := rand.Read(randomness); e != nil {
 		logger.Println("rand.Read returned error", e)
 		return nil, fmt.Errorf(`internal error`)
@@ -96,7 +94,7 @@ func (f Folder) Authenticate(credentials json.RawMessage) (json.RawMessage, erro
 	copy(index[:], randomness[:32])
 	xorKeyBytes(keyBytes, randomness[32:])
 
-	authenticated.Store(index, *keyBytes)
+	authenticated.Store(index, keyBytes.Copy())
 	keyBytes.Destroy()
 	keyBytes = nil
 
@@ -125,35 +123,39 @@ func (f Folder) RenewToken(oldToken json.RawMessage) (json.RawMessage, error) {
 	if e != nil {
 		return nil, fmt.Errorf(`invalid token`)
 	}
-	if len(secret) != secretLen {
+	if len(secret) < 32 {
 		return nil, fmt.Errorf(`invalid token`)
 	}
-	index := [32]byte{}
-	copy(index[:], secret[:32])
-	loaded, ok := authenticated.Load(index)
+	oldIndex := [32]byte{}
+	copy(oldIndex[:], secret[:32])
+	loaded, ok := authenticated.Load(oldIndex)
 	if !ok {
 		return nil, fmt.Errorf(`invalid token`)
 	}
-	keyByteArray := loaded.(auth.KeyBytes)
-	keyBytes := &keyByteArray
-	xorKeyBytes(keyBytes, secret[32:])
 
-	randomness := make([]byte, secretLen, secretLen)
+	keyBytes := loaded.(auth.KeyBytes).Copy()
+	if e := xorKeyBytes(keyBytes, secret[32:]); e != nil {
+		return nil, fmt.Errorf(`invalid token`)
+	}
+
+	randomness := make([]byte, len(keyBytes)+32, len(keyBytes)+32)
 	if _, e := rand.Read(randomness); e != nil {
 		logger.Println("rand.Read returned error", e)
 		return nil, fmt.Errorf(`internal error`)
 	}
 
-	index = [32]byte{}
-	copy(index[:], randomness[:32])
-	xorKeyBytes(keyBytes, randomness[32:])
+	newIndex := [32]byte{}
+	copy(newIndex[:], randomness[:32])
+	if e := xorKeyBytes(keyBytes, randomness[32:]); e != nil {
+		return nil, fmt.Errorf(`invalid token`)
+	}
 
-	authenticated.Store(index, *keyBytes)
+	authenticated.Store(newIndex, keyBytes)
 	keyBytes.Destroy()
 	keyBytes = nil
 
 	time.AfterFunc(tokenExpiration, func() {
-		authenticated.Delete(index)
+		authenticated.Delete(newIndex)
 	})
 
 	bs, e := json.Marshal(Token{
@@ -161,10 +163,11 @@ func (f Folder) RenewToken(oldToken json.RawMessage) (json.RawMessage, error) {
 		Expires: time.Now().Add(tokenExpiration).Format(time.RFC3339),
 	})
 	if e != nil {
-		authenticated.Delete(index)
+		authenticated.Delete(newIndex)
 		logger.Println("failed marshalling token", e)
 		return nil, fmt.Errorf(`internal error`)
 	}
+	authenticated.Delete(oldIndex)
 	return bs, nil
 
 }
@@ -180,7 +183,7 @@ func (f Folder) ExchangeToken(token json.RawMessage) (*auth.Key, error) {
 	if e != nil {
 		return nil, fmt.Errorf(`invalid token`)
 	}
-	if len(secret) != secretLen {
+	if len(secret) < 32 {
 		return nil, fmt.Errorf(`invalid token`)
 	}
 	index := [32]byte{}
@@ -189,10 +192,9 @@ func (f Folder) ExchangeToken(token json.RawMessage) (*auth.Key, error) {
 	if !ok {
 		return nil, fmt.Errorf(`invalid token`)
 	}
-	keyByteArray := loaded.(auth.KeyBytes)
-	keyBytes := &keyByteArray
+	keyBytes := loaded.(auth.KeyBytes).Copy()
 	xorKeyBytes(keyBytes, secret[32:])
-	return auth.BytesToKey(keyBytes), nil
+	return auth.BytesToKey(keyBytes)
 }
 
 func parseToken(token json.RawMessage) (*Token, error) {
@@ -210,12 +212,12 @@ func parseToken(token json.RawMessage) (*Token, error) {
 	return &tok, nil
 }
 
-func xorKeyBytes(bs *auth.KeyBytes, mask []byte) {
-	if len(mask) != auth.KeyBytesLen {
-		panic("precondition violation: len(mask) != auth.KeyBytesLen")
+func xorKeyBytes(bs auth.KeyBytes, mask []byte) error {
+	if len(bs) != len(mask) {
+		return fmt.Errorf(`key / mask length mismatch`)
 	}
-	i := 0
-	for ; i < auth.KeyBytesLen-(auth.KeyBytesLen%8); i += 8 {
+	i, l := 0, len(bs)
+	for ; i < l-(l%8); i += 8 {
 		bs[i+0] ^= mask[i+0]
 		bs[i+1] ^= mask[i+1]
 		bs[i+2] ^= mask[i+2]
@@ -225,7 +227,8 @@ func xorKeyBytes(bs *auth.KeyBytes, mask []byte) {
 		bs[i+6] ^= mask[i+6]
 		bs[i+7] ^= mask[i+7]
 	}
-	for ; i < auth.KeyBytesLen; i++ {
+	for ; i < l; i++ {
 		bs[i] ^= mask[i]
 	}
+	return nil
 }
