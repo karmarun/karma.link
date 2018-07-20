@@ -54,26 +54,26 @@ const secretLen = auth.KeyBytesLen + 32
 func (f Folder) Authenticate(credentials json.RawMessage) (json.RawMessage, error) {
 	creds := Credentials{}
 	if e := json.Unmarshal(credentials, &creds); e != nil {
-		return nil, fmt.Errorf(`invalid credential structure`)
+		return nil, fmt.Errorf(`invalid credentials`)
 	}
 	path := filepath.Join(append([]string{string(f)}, creds.FilePath...)...)
 	file, e := os.Open(path)
 	if e != nil {
-		return nil, fmt.Errorf(`error opening key file`) // intentionally vague
+		return nil, fmt.Errorf(`invalid credentials`) // intentionally vague
 	}
 	defer file.Close()
 	stat, e := file.Stat()
 	if e != nil {
 		logger.Println("error stat-ing file", path, e)
-		return nil, fmt.Errorf(`internal error stat-ing key file (has been logged)`)
+		return nil, fmt.Errorf(`invalid credentials`) // intentionally vague
 	}
 	if stat.Size() > maxKeyFileSize {
-		return nil, fmt.Errorf(`error opening key file`) // intentionally vague
+		return nil, fmt.Errorf(`invalid credentials`) // intentionally vague
 	}
 	bs, e := ioutil.ReadAll(file)
 	if e != nil {
 		logger.Println("error reading key file", path, e)
-		return nil, fmt.Errorf(`error opening key file`) // intentionally vague
+		return nil, fmt.Errorf(`invalid credentials`) // intentionally vague
 	}
 	key := (*auth.Key)(nil)
 	{
