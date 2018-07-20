@@ -36,8 +36,8 @@ type Credentials struct {
 
 // Token represents the carrier token structure returned by Folder.Authenticate
 type Token struct {
-	Secret  []byte `json:"secret"`
-	Expires string `json:"expires"`
+	Secret  []byte    `json:"secret"`
+	Expires time.Time `json:"expires"`
 }
 
 const maxKeyFileSize = 1024 * 1024 // 1MB
@@ -90,7 +90,7 @@ func (f Folder) Authenticate(credentials json.RawMessage) (json.RawMessage, erro
 
 	bs, e = json.Marshal(Token{
 		Secret:  secret,
-		Expires: time.Now().Add(tokenExpiration).Format(time.RFC3339),
+		Expires: time.Now().Add(tokenExpiration),
 	})
 	if e != nil {
 		authenticated.Delete(index)
@@ -125,7 +125,7 @@ func (f Folder) RenewToken(oldToken json.RawMessage) (json.RawMessage, error) {
 
 	bs, e := json.Marshal(Token{
 		Secret:  secret,
-		Expires: time.Now().Add(tokenExpiration).Format(time.RFC3339),
+		Expires: time.Now().Add(tokenExpiration),
 	})
 	if e != nil {
 		authenticated.Delete(newIndex)
@@ -167,33 +167,8 @@ func parseToken(token json.RawMessage) (*Token, error) {
 	if e := json.Unmarshal(token, &tok); e != nil {
 		return nil, fmt.Errorf(`invalid token`)
 	}
-	expiry, e := time.Parse(time.RFC3339, tok.Expires)
-	if e != nil {
-		return nil, fmt.Errorf(`invalid token expiration`)
-	}
-	if time.Now().After(expiry) {
+	if time.Now().After(tok.Expires) {
 		return nil, fmt.Errorf(`token expired`)
 	}
 	return &tok, nil
-}
-
-func xorKeyBytes(bs auth.KeyBytes, mask []byte) error {
-	if len(bs) != len(mask) {
-		return fmt.Errorf(`key / mask length mismatch`)
-	}
-	i, l := 0, len(bs)
-	for ; i < l-(l%8); i += 8 {
-		bs[i+0] ^= mask[i+0]
-		bs[i+1] ^= mask[i+1]
-		bs[i+2] ^= mask[i+2]
-		bs[i+3] ^= mask[i+3]
-		bs[i+4] ^= mask[i+4]
-		bs[i+5] ^= mask[i+5]
-		bs[i+6] ^= mask[i+6]
-		bs[i+7] ^= mask[i+7]
-	}
-	for ; i < l; i++ {
-		bs[i] ^= mask[i]
-	}
-	return nil
 }
